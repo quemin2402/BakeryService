@@ -12,9 +12,12 @@ The main functionality:
 ## Team members
 - Merey Ibraim (Group SE-2308)
 
-## Screenshot of the main page
+## Screenshots of the website
 
-()
+<img width="1440" alt="The main page" src="https://github.com/user-attachments/assets/af1d8c63-b438-463a-8fb6-c695cd083df9" />
+
+<img width="1435" alt="The menu page" src="https://github.com/user-attachments/assets/9b8e82a6-c69b-4c98-9a08-0185b0358bb4" />
+
 
 ## How to launch a project
 
