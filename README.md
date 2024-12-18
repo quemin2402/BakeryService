@@ -49,7 +49,7 @@ go mod tidy
    connStr := "host=localhost user=yourusername password=yourpassword dbname=bakery port=5432 sslmode=disable"
    ```
 3. Run the project to automatically apply the migrations:
-   ```bash
+```bash
 go run main.go
 ```
 
