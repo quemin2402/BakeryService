@@ -1,0 +1,41 @@
+Creation of the pastry database for CRUD operations practice!
+
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    price NUMERIC(10, 2) NOT NULL,
+    description TEXT
+);
+
+-----------------------------------------
+Here you insert some pastries for the table :)
+
+INSERT INTO products (name, price, description) VALUES
+('French Baguette', 3.00, 'A classic French bread with a crisp crust and soft interior.'),
+('Rye Bread', 2.50, 'A hearty bread made with rye flour, perfect for sandwiches.'),
+('Sourdough Bread', 4.00, 'A tangy bread with a chewy texture, naturally fermented.'),
+('Whole Wheat Bread', 3.50, 'A healthy bread made with whole wheat flour.'),
+('Ciabatta', 3.80, 'An Italian bread with a crisp crust and airy interior.'),
+('Classic Croissant', 2.80, 'A flaky and buttery French pastry.'),
+('Chocolate Croissant', 3.20, 'A croissant filled with rich chocolate.'),
+('Almond Croissant', 3.80, 'A croissant with almond cream filling and sliced almonds.'),
+('Lemon Tart', 4.50, 'A tart pastry filled with tangy lemon custard.'),
+('Apple Tart', 4.20, 'A sweet pastry topped with caramelized apples.'),
+('Ham and Cheese Croissant', 4.80, 'A savory croissant with ham and melted cheese.'),
+('Quiche Lorraine', 5.50, 'A savory pie with bacon, cheese, and custard filling.'),
+('Spinach and Feta Croissant', 4.50, 'A croissant filled with spinach and feta cheese.'),
+('Cheese and Herb Focaccia', 4.20, 'An Italian bread with cheese and aromatic herbs.'),
+('Shortbread Cookies', 2.50, 'Buttery and crumbly cookies that melt in your mouth.'),
+('Palmiers', 3.00, 'Crispy, flaky pastries shaped like palm leaves.'),
+('Langues de Chat', 2.80, 'Light and crispy cookies, shaped like a cat’s tongue.'),
+('Chocolate Tart', 5.80, 'A rich tart with chocolate ganache filling.'),
+('Tarte Tatin', 5.50, 'An upside-down tart with caramelized apples.'),
+('Onion Tart', 4.50, 'A savory tart with caramelized onions and cheese.'),
+('Opera Cake', 6.00, 'A layered French cake with coffee and chocolate flavors.'),
+('Paris-Brest', 7.50, 'A ring-shaped pastry filled with praline cream.'),
+('Black Forest Cake', 7.80, 'A chocolate sponge cake with cherries and whipped cream.');
+
+-----------------------------------------
+By this command you can get all the info of the table!
+
+SELECT * FROM products;
