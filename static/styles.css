@@ -1,0 +1,35 @@
+body {
+  font-family: "Lora", serif;
+  background-color: #fdf5e6;
+}
+
+.navbar-brand {
+  font-family: "Dancing Script", cursive;
+  color: #8b4513;
+}
+
+h2 {
+  font-family: "Lora", serif;
+  color: #5a4a42;
+}
+
+.nav-link:hover {
+  text-decoration: underline;
+}
+
+.btn {
+  background-color: #8b4513;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover,
+.btn:hover {
+  background-color: #a0522d;
+}
+
+.menu-card-img {
+  height: 415px;
+  object-fit: cover;
+  width: 100%;
+}
