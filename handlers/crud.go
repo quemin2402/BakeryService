@@ -4,7 +4,9 @@ import (
 	"BakeryService/models"
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"gorm.io/gorm"
@@ -152,5 +154,70 @@ func DeleteProduct(db *gorm.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": "Product deleted successfully"})
+	}
+}
+
+func GetFilteredProducts(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var products []models.Product
+
+		nameFilter := r.URL.Query().Get("name")
+		categoryFilter := r.URL.Query().Get("category")
+		priceMin := r.URL.Query().Get("priceMin")
+		priceMax := r.URL.Query().Get("priceMax")
+		sortBy := r.URL.Query().Get("sortBy")
+		sortOrder := r.URL.Query().Get("sortOrder")
+		page := r.URL.Query().Get("page")
+
+		limit := 8
+		offset := 0
+
+		if page != "" {
+			pageNum, err := strconv.Atoi(page)
+			if err == nil && pageNum > 1 {
+				offset = (pageNum - 1) * limit
+			}
+		}
+
+		query := db.Model(&models.Product{})
+
+		if nameFilter != "" {
+			query = query.Where("name ILIKE ?", "%"+nameFilter+"%")
+		}
+		if categoryFilter != "" {
+			query = query.Where("category = ?", categoryFilter)
+		}
+		if priceMin != "" {
+			if minPrice, err := strconv.ParseFloat(priceMin, 64); err == nil {
+				query = query.Where("price >= ?", minPrice)
+			}
+		}
+		if priceMax != "" {
+			if maxPrice, err := strconv.ParseFloat(priceMax, 64); err == nil {
+				query = query.Where("price <= ?", maxPrice)
+			}
+		}
+
+		if sortBy != "" {
+			order := "ASC"
+			if sortOrder == "desc" {
+				order = "DESC"
+			}
+			query = query.Order(sortBy + " " + order)
+		}
+
+		query = query.Limit(limit).Offset(offset)
+
+		if err := query.Find(&products).Error; err != nil {
+			log.Printf("Error fetching products: %v", err)
+			http.Error(w, "Failed to fetch products", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(products)
+
+		log.Printf("Query received: %v", r.URL.Query())
+
 	}
 }
