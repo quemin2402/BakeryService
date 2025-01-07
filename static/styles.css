@@ -33,3 +33,19 @@ button:hover,
   object-fit: cover;
   width: 100%;
 }
+
+#products {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px; /* Отступы между карточками */
+}
+
+#products .col {
+  flex: 0 0 calc(25% - 20px); /* Каждая карточка занимает 25% ширины с учетом отступов */
+  box-sizing: border-box;
+}
+
+#products .card {
+  height: 100%; /* Растягивать карточки по высоте */
+}
+
