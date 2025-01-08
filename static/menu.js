@@ -10,24 +10,33 @@ document.addEventListener('DOMContentLoaded', function () {
   const searchByIdInput = document.querySelector('#searchProductInput');
 
   let currentPage = 1;
-  const limit = 8; // Количество продуктов на странице
+  const limit = 8;
 
   async function fetchProducts(queryParams = '') {
     try {
       const response = await fetch(`/api/products?page=${currentPage}&limit=${limit}${queryParams}`);
-      if (!response.ok) throw new Error('Failed to fetch products');
+      if (!response.ok) {
+        if (response.status === 429) { // Обработка превышения лимита
+          const retryAfter = response.headers.get("Retry-After") || "a few seconds";
+          alert(`Rate limit exceeded. Please wait ${retryAfter} and try again.`);
+          return;
+        } else {
+          throw new Error('Failed to fetch products');
+        }
+      }
+
       const products = await response.json();
       renderProducts(products);
 
-      // Обновить состояние кнопок пагинации
       document.getElementById('currentPage').textContent = `Page ${currentPage}`;
       document.getElementById('prevPage').disabled = currentPage === 1;
-      document.getElementById('nextPage').disabled = products.length < limit; // Если меньше лимита, значит, данных больше нет
+      document.getElementById('nextPage').disabled = products.length < limit;
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to load products. Please try again.');
+      alert(error.message);
     }
   }
+
 
   document.getElementById('prevPage').addEventListener('click', () => {
     if (currentPage > 1) {
@@ -41,10 +50,12 @@ document.addEventListener('DOMContentLoaded', function () {
     fetchProducts();
   });
 
-
-
   function renderProducts(products) {
     productContainer.innerHTML = '';
+    if (!Array.isArray(products)) {
+      productContainer.innerHTML = '<p class="text-center">Failed to load products. Please try again later.</p>';
+      return;
+    }
     if (products.length === 0) {
       productContainer.innerHTML = '<p class="text-center">No products found.</p>';
       return;
@@ -70,7 +81,6 @@ document.addEventListener('DOMContentLoaded', function () {
     attachDeleteEvents();
     attachEditEvents();
   }
-
 
   addProductButton.addEventListener('click', function () {
     const name = prompt('Enter product name (required):');
@@ -165,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const response = await fetch(`/api/product/${id}`);
       if (!response.ok) throw new Error('Product not found');
       const product = await response.json();
-      renderProducts([product]); // Отобразить только найденный продукт
+      renderProducts([product]);
     } catch (error) {
       console.error('Error:', error);
       alert('Product not found!');
@@ -189,15 +199,43 @@ document.addEventListener('DOMContentLoaded', function () {
     if (sortBy) queryParams += `&sortBy=${encodeURIComponent(sortBy)}`;
     if (sortOrder) queryParams += `&sortOrder=${encodeURIComponent(sortOrder)}`;
 
-    // Убираем лишний "&" в конце
     queryParams = queryParams.endsWith('&') ? queryParams.slice(0, -1) : queryParams;
 
     fetchProducts(queryParams);
   });
 
+  const params = new URLSearchParams({
+    category: "Sweet",
+    priceMin: "0",
+    priceMax: "100",
+    sortBy: "name",
+    sortOrder: "asc",
+  }).toString();
+
+  fetch(`/api/products?${params}`, {
+    method: "GET",
+  })
+      .then(response => {
+        if (!response.ok) {
+          if (response.status === 429) {
+            const retryAfter = response.headers.get("Retry-After") || "a few seconds";
+            alert(`Rate limit exceeded. Please wait ${retryAfter} seconds and try again.`);
+            return;
+          } else {
+            throw new Error("Failed to load products. Please try again later.");
+          }
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log("Products loaded:", data);
+        renderProducts(data);
+      })
+      .catch(error => {
+        alert(error.message);
+      });
 
 
   fetchProducts();
-  console.log(queryParams); // Убедитесь, что строка запроса правильная
 
 });

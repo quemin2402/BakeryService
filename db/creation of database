@@ -81,3 +81,42 @@ UPDATE products SET category = 'Pastry' WHERE id IN (6, 7, 8, 9, 10, 15, 16, 17,
 UPDATE products SET category = 'Savory' WHERE id IN (11, 12, 13, 20);
 UPDATE products SET category = 'Sweet' WHERE id IN (9, 10, 15, 16, 17, 18, 19, 22, 23);
 
+---------------------------------------------------------------------
+
+Script for database creation
+
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    price NUMERIC(10, 2) NOT NULL,
+    description TEXT,
+    image VARCHAR(255),
+    category VARCHAR(50)
+);
+
+INSERT INTO products (name, price, description, image, category) VALUES
+('French Baguette', 3.00, 'A classic French bread with a crisp crust and soft interior.', '/static/images/1.jpg', 'Bread'),
+('Rye Bread', 2.50, 'A hearty bread made with rye flour, perfect for sandwiches.', '/static/images/2.jpg', 'Bread'),
+('Sourdough Bread', 4.00, 'A tangy bread with a chewy texture, naturally fermented.', '/static/images/3.jpg', 'Bread'),
+('Whole Wheat Bread', 3.50, 'A healthy bread made with whole wheat flour.', '/static/images/4.jpg', 'Bread'),
+('Ciabatta', 3.80, 'An Italian bread with a crisp crust and airy interior.', '/static/images/5.jpg', 'Bread'),
+('Classic Croissant', 2.80, 'A flaky and buttery French pastry.', '/static/images/6.jpg', 'Pastry'),
+('Chocolate Croissant', 3.20, 'A croissant filled with rich chocolate.', '/static/images/7.jpg', 'Pastry'),
+('Almond Croissant', 3.80, 'A croissant with almond cream filling and sliced almonds.', '/static/images/8.jpg', 'Pastry'),
+('Lemon Tart', 4.50, 'A tart pastry filled with tangy lemon custard.', '/static/images/9.jpg', 'Sweet'),
+('Apple Tart', 4.20, 'A sweet pastry topped with caramelized apples.', '/static/images/10.jpg', 'Sweet'),
+('Ham and Cheese Croissant', 4.80, 'A savory croissant with ham and melted cheese.', '/static/images/11.jpg', 'Savory'),
+('Quiche Lorraine', 5.50, 'A savory pie with bacon, cheese, and custard filling.', '/static/images/12.jpg', 'Savory'),
+('Spinach and Feta Croissant', 4.50, 'A croissant filled with spinach and feta cheese.', '/static/images/13.jpg', 'Savory'),
+('Cheese and Herb Focaccia', 4.20, 'An Italian bread with cheese and aromatic herbs.', '/static/images/14.jpg', 'Bread'),
+('Shortbread Cookies', 2.50, 'Buttery and crumbly cookies that melt in your mouth.', '/static/images/15.jpg', 'Pastry'),
+('Palmiers', 3.00, 'Crispy, flaky pastries shaped like palm leaves.', '/static/images/16.jpg', 'Pastry'),
+('Langues de Chat', 2.80, 'Light and crispy cookies, shaped like a cat’s tongue.', '/static/images/17.jpg', 'Pastry'),
+('Chocolate Tart', 5.80, 'A rich tart with chocolate ganache filling.', '/static/images/18.jpg', 'Sweet'),
+('Tarte Tatin', 5.50, 'An upside-down tart with caramelized apples.', '/static/images/19.jpg', 'Sweet'),
+('Onion Tart', 4.50, 'A savory tart with caramelized onions and cheese.', '/static/images/20.jpg', 'Savory'),
+('Opera Cake', 6.00, 'A layered French cake with coffee and chocolate flavors.', '/static/images/21.jpg', 'Pastry'),
+('Paris-Brest', 7.50, 'A ring-shaped pastry filled with praline cream.', '/static/images/22.jpg', 'Pastry'),
+('Black Forest Cake', 7.80, 'A chocolate sponge cake with cherries and whipped cream.', '/static/images/23.jpg', 'Sweet');
+
+

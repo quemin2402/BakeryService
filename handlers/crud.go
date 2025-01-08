@@ -1,13 +1,15 @@
 package handlers
 
 import (
+	"BakeryService/logger"
 	"BakeryService/models"
 	"encoding/json"
 	"github.com/gorilla/mux"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -36,17 +38,35 @@ func GetProductByID(db *gorm.DB) http.HandlerFunc {
 		id := vars["id"]
 
 		if id == "" {
+			logger.LogEntry(map[string]interface{}{
+				"endpoint": "GetProductByID",
+				"status":   "failed",
+				"error":    "Missing product ID",
+				"time":     time.Now().Format(time.RFC3339),
+			})
 			http.Error(w, "Product ID is required", http.StatusBadRequest)
 			return
 		}
 
 		var product models.Product
-
 		if err := db.First(&product, id).Error; err != nil {
+			logger.LogEntry(map[string]interface{}{
+				"endpoint":   "GetProductByID",
+				"product_id": id,
+				"status":     "failed",
+				"error":      err.Error(),
+				"time":       time.Now().Format(time.RFC3339),
+			})
 			http.Error(w, "Product not found", http.StatusNotFound)
 			return
 		}
 
+		logger.LogEntry(map[string]interface{}{
+			"endpoint":   "GetProductByID",
+			"product_id": id,
+			"status":     "success",
+			"time":       time.Now().Format(time.RFC3339),
+		})
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(product)
 	}
@@ -55,50 +75,50 @@ func GetProductByID(db *gorm.DB) http.HandlerFunc {
 func CreateProduct(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var product models.Product
-		decoder := json.NewDecoder(r.Body)
-		err := decoder.Decode(&product)
-
+		err := json.NewDecoder(r.Body).Decode(&product)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(Response{
-				Status:  "fail",
-				Message: "Invalid JSON format",
-			})
+			logrus.WithFields(logrus.Fields{
+				"endpoint": "CreateProduct",
+				"error":    err,
+			}).Error("Failed to parse request body")
+			http.Error(w, "Invalid request format", http.StatusBadRequest)
 			return
 		}
 
 		if strings.TrimSpace(product.Name) == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(Response{
-				Status:  "fail",
-				Message: "Product name is required",
-			})
+			logrus.WithFields(logrus.Fields{
+				"endpoint": "CreateProduct",
+				"error":    "Product name is required",
+			}).Warn("Product creation failed due to missing name")
+			http.Error(w, "Product name is required", http.StatusBadRequest)
 			return
 		}
 
 		if product.Price <= 0 {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(Response{
-				Status:  "fail",
-				Message: "Price must be greater than zero",
-			})
+			logrus.WithFields(logrus.Fields{
+				"endpoint": "CreateProduct",
+				"error":    "Invalid product price",
+			}).Warn("Product creation failed due to invalid price")
+			http.Error(w, "Price must be greater than zero", http.StatusBadRequest)
 			return
 		}
 
 		if err := db.Create(&product).Error; err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(Response{
-				Status:  "fail",
-				Message: "Failed to create product",
-			})
+			logrus.WithFields(logrus.Fields{
+				"endpoint": "CreateProduct",
+				"error":    err,
+			}).Error("Failed to create product")
+			http.Error(w, "Failed to create product", http.StatusInternalServerError)
 			return
 		}
 
+		logrus.WithFields(logrus.Fields{
+			"endpoint":   "CreateProduct",
+			"product_id": product.ID,
+		}).Info("Product created successfully")
+
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(Response{
-			Status:  "success",
-			Message: "Product created successfully",
-		})
+		json.NewEncoder(w).Encode(product)
 	}
 }
 
@@ -148,10 +168,23 @@ func DeleteProduct(db *gorm.DB) http.HandlerFunc {
 		id := vars["id"]
 
 		if err := db.Delete(&models.Product{}, id).Error; err != nil {
+			logger.LogEntry(map[string]interface{}{
+				"endpoint":   "DeleteProduct",
+				"product_id": id,
+				"status":     "failed",
+				"error":      err.Error(),
+				"time":       time.Now().Format(time.RFC3339),
+			})
 			http.Error(w, "Failed to delete product", http.StatusInternalServerError)
 			return
 		}
 
+		logger.LogEntry(map[string]interface{}{
+			"endpoint":   "DeleteProduct",
+			"product_id": id,
+			"status":     "success",
+			"time":       time.Now().Format(time.RFC3339),
+		})
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": "Product deleted successfully"})
 	}
@@ -171,7 +204,6 @@ func GetFilteredProducts(db *gorm.DB) http.HandlerFunc {
 
 		limit := 8
 		offset := 0
-
 		if page != "" {
 			pageNum, err := strconv.Atoi(page)
 			if err == nil && pageNum > 1 {
@@ -209,15 +241,58 @@ func GetFilteredProducts(db *gorm.DB) http.HandlerFunc {
 		query = query.Limit(limit).Offset(offset)
 
 		if err := query.Find(&products).Error; err != nil {
-			log.Printf("Error fetching products: %v", err)
+			logger.LogEntry(map[string]interface{}{
+				"endpoint": "GetFilteredProducts",
+				"filters": map[string]string{
+					"name":      nameFilter,
+					"category":  categoryFilter,
+					"priceMin":  priceMin,
+					"priceMax":  priceMax,
+					"sortBy":    sortBy,
+					"sortOrder": sortOrder,
+				},
+				"error":  err.Error(),
+				"status": "failed",
+				"time":   time.Now().Format(time.RFC3339),
+			})
 			http.Error(w, "Failed to fetch products", http.StatusInternalServerError)
 			return
 		}
 
+		if len(products) == 0 {
+			logger.LogEntry(map[string]interface{}{
+				"endpoint": "GetFilteredProducts",
+				"filters": map[string]string{
+					"name":      nameFilter,
+					"category":  categoryFilter,
+					"priceMin":  priceMin,
+					"priceMax":  priceMax,
+					"sortBy":    sortBy,
+					"sortOrder": sortOrder,
+				},
+				"product_count": 0,
+				"status":        "no_results",
+				"time":          time.Now().Format(time.RFC3339),
+			})
+			http.Error(w, "No products match the filter criteria", http.StatusNotFound)
+			return
+		}
+
+		logger.LogEntry(map[string]interface{}{
+			"endpoint": "GetFilteredProducts",
+			"filters": map[string]string{
+				"name":      nameFilter,
+				"category":  categoryFilter,
+				"priceMin":  priceMin,
+				"priceMax":  priceMax,
+				"sortBy":    sortBy,
+				"sortOrder": sortOrder,
+			},
+			"product_count": len(products),
+			"status":        "success",
+			"time":          time.Now().Format(time.RFC3339),
+		})
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(products)
-
-		log.Printf("Query received: %v", r.URL.Query())
-
 	}
 }
