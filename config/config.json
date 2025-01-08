@@ -1,0 +1,10 @@
+{
+  "SMTPHost": "smtp.office365.com",
+  "SMTPPort": 587,
+  "SenderEmail": "231140@astanait.edu.kz",
+  "SenderPassword": "MinYoung2402!",
+  "DatabaseHost": "localhost",
+  "DatabasePort": 5432,
+  "DatabaseUser": "postgres",
+  "DatabaseName": "emails"
+}

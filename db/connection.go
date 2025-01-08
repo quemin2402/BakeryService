@@ -19,7 +19,10 @@ func ConnectDB() *gorm.DB {
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
-
+	err = db.AutoMigrate(&models.Email{})
+	if err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
+	}
 	log.Println("Connected to the database successfully!")
 	return db
 }

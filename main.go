@@ -1,6 +1,7 @@
 package main
 
 import (
+	"BakeryService/config"
 	"BakeryService/db"
 	"BakeryService/handlers"
 	"BakeryService/logger"
@@ -37,6 +38,11 @@ func main() {
 		})
 	}()
 
+	config, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
 	r := mux.NewRouter()
 	r.Use(rateLimitMiddleware)
 	r.Use(errorHandlingMiddleware)
@@ -47,6 +53,8 @@ func main() {
 	r.HandleFunc("/api/product/update", handlers.UpdateProduct(database)).Methods("PUT")
 	r.HandleFunc("/api/product/delete/{id}", handlers.DeleteProduct(database)).Methods("DELETE")
 	r.HandleFunc("/api/products", handlers.GetFilteredProducts(database)).Methods("GET")
+
+	r.HandleFunc("/api/send-email", handlers.SendEmailHandler(config)).Methods("POST")
 
 	fs := http.FileServer(http.Dir("./static"))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
