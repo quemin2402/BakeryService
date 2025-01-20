@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const response = await fetch(`/api/products?page=${currentPage}&limit=${limit}${queryParams}`);
       if (!response.ok) {
-        if (response.status === 429) { // Обработка превышения лимита
+        if (response.status === 429) {
           const retryAfter = response.headers.get("Retry-After") || "a few seconds";
           alert(`Rate limit exceeded. Please wait ${retryAfter} and try again.`);
           return;

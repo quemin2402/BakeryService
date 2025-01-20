@@ -37,15 +37,15 @@ button:hover,
 #products {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px; /* Отступы между карточками */
+  gap: 20px;
 }
 
 #products .col {
-  flex: 0 0 calc(25% - 20px); /* Каждая карточка занимает 25% ширины с учетом отступов */
+  flex: 0 0 calc(25% - 20px);
   box-sizing: border-box;
 }
 
 #products .card {
-  height: 100%; /* Растягивать карточки по высоте */
+  height: 100%;
 }
 
