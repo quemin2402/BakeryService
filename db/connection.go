@@ -9,7 +9,7 @@ import (
 )
 
 func ConnectDB() *gorm.DB {
-	connStr := "host=localhost user=postgres dbname=bakery port=5432 sslmode=disable"
+	connStr := "host=dpg-cu98v31u0jms73fchiag-a.oregon-postgres.render.com user=bakery password=FOiJPHf6SQRqgUih0ipJN183iI1VA2mm dbname=bakery_688h port=5432 sslmode=require"
 	db, err := gorm.Open(postgres.Open(connStr), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %v", err)
