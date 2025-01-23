@@ -51,7 +51,7 @@ func SendEmailWithConfirmation(cfg *config.Config, recipientEmail, confirmationT
 	body := fmt.Sprintf(`
         <p>Thank you for registering!</p>
         <p>Please click the link below to verify your email address:</p>
-        <a href="http://localhost:8080/api/auth/confirm-email?token=%s">Verify Email</a>
+        <a href="http://bakeryservice.onrender.com/api/auth/confirm-email?token=%s">Verify Email</a>
     `, confirmationToken)
 	m.SetBody("text/html", body)
 
