@@ -123,6 +123,11 @@ func errorHandlingMiddleware(next http.Handler) http.Handler {
 
 func rateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/static/" || r.URL.Path[:8] == "/static/" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		if !limiter.Allow() {
 			w.Header().Set("Retry-After", "1")
 			w.Header().Set("X-RateLimit-Limit", "5")
