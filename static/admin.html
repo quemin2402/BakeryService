@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="container mt-5">
+  <h1>Admin Panel</h1>
+
+  <!-- Users Table -->
+  <section class="mt-4">
+    <h2>Users</h2>
+    <div class="d-flex justify-content-between mb-3">
+      <input type="text" id="userSearchInput" class="form-control w-50" placeholder="Search users by email">
+      <button id="createUserBtn" class="btn btn-success">Create User</button>
+    </div>
+    <table class="table table-bordered">
+      <thead>
+      <tr>
+        <th>Email</th>
+        <th>Role</th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody id="userTableBody"></tbody>
+    </table>
+  </section>
+
+  <!-- Orders Table -->
+  <section class="mt-4">
+    <h2>Orders</h2>
+    <div class="d-flex justify-content-between mb-3">
+      <input type="text" id="orderSearchInput" class="form-control w-50" placeholder="Search orders by user email">
+      <div class="d-flex w-50">
+        <select id="orderSortSelect" class="form-select w-50">
+          <option value="order_date">Sort by Order Date</option>
+          <option value="total_price">Sort by Total Price</option>
+        </select>
+        <select id="orderSortOrder" class="form-select w-50 ms-2">
+          <option value="asc">Ascending</option>
+          <option value="desc">Descending</option>
+        </select>
+      </div>
+    </div>
+
+    <table class="table table-bordered">
+      <thead>
+      <tr>
+        <th>User Email</th>
+        <th>Order Date</th>
+        <th>Products</th>
+        <th>Total Price</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody id="orderTableBody"></tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    const userTableBody = document.getElementById('userTableBody');
+    const userSearchInput = document.getElementById('userSearchInput');
+    const createUserBtn = document.getElementById('createUserBtn');
+    const token = localStorage.getItem('jwtToken');
+
+    if (!token) {
+      alert('You must be logged in to view this page.');
+      window.location.href = '/login.html';
+      return;
+    }
+
+    async function fetchUsers(search = '') {
+      try {
+        const response = await fetch(`/admin/users?search=${search}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+        const users = await response.json();
+        renderUsers(users);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+        alert('Failed to load users.');
+      }
+    }
+
+    function renderUsers(users) {
+      userTableBody.innerHTML = '';
+      users.forEach(user => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+      <td><input type="text" value="${user.email}" data-id="${user.id}" class="form-control user-email"></td>
+      <td>
+        <select data-id="${user.id}" class="form-select user-role">
+          <option value="1" ${user.role_id === 1 ? 'selected' : ''}>Admin</option>
+          <option value="2" ${user.role_id === 2 ? 'selected' : ''}>User</option>
+        </select>
+      </td>
+      <td><input type="text" value="${user.first_name || ''}" data-id="${user.id}" class="form-control user-first-name"></td>
+      <td><input type="text" value="${user.last_name || ''}" data-id="${user.id}" class="form-control user-last-name"></td>
+      <td>
+        <button class="btn btn-primary btn-sm update-user" data-id="${user.id}">Update</button>
+        <button class="btn btn-danger btn-sm delete-user" data-id="${user.id}">Delete</button>
+      </td>
+    `;
+        userTableBody.appendChild(row);
+      });
+
+      attachUserEvents();
+    }
+
+
+    function attachUserEvents() {
+      document.querySelectorAll('.update-user').forEach(button => {
+        button.addEventListener('click', async () => {
+          const userId = button.dataset.id;
+
+          const email = document.querySelector(`.user-email[data-id="${userId}"]`).value;
+          const roleId = parseInt(document.querySelector(`.user-role[data-id="${userId}"]`).value);
+          const firstName = document.querySelector(`.user-first-name[data-id="${userId}"]`).value;
+          const lastName = document.querySelector(`.user-last-name[data-id="${userId}"]`).value;
+
+          try {
+            const response = await fetch(`/admin/users/${userId}`, {
+              method: 'PUT',
+              headers: { 'Authorization': `Bearer ${token}`,
+                         'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ email, role_id: roleId, first_name: firstName, last_name: lastName })
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to update user');
+            }
+
+            alert('User updated successfully');
+            fetchUsers();
+          } catch (err) {
+            console.error('Error updating user:', err);
+            alert('Failed to update user');
+          }
+        });
+      });
+
+
+
+      document.querySelectorAll('.delete-user').forEach(button => {
+        button.addEventListener('click', async () => {
+          const userId = button.dataset.id;
+          if (confirm('Are you sure you want to delete this user?')) {
+            try {
+              const response = await fetch(`/admin/users/${userId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` },
+              });
+              if (!response.ok) {
+                throw new Error('Failed to delete user');
+              }
+              fetchUsers();
+            } catch (err) {
+              console.error('Error deleting user:', err);
+              alert('Failed to delete user.');
+            }
+          }
+        });
+      });
+    }
+
+    createUserBtn.addEventListener('click', () => {
+      const email = prompt('Enter user email:');
+      const firstName = prompt('Enter first name:');
+      const lastName = prompt('Enter last name:');
+      const roleId = prompt('Enter role ID (1 for Admin, 2 for User):');
+
+      if (email && roleId) {
+        fetch('/admin/users', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`,
+                     'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, role_id: parseInt(roleId), first_name: firstName, last_name: lastName })
+        })
+                .then(() => fetchUsers())
+                .catch(err => console.error('Error creating user:', err));
+      }
+    });
+
+
+    userSearchInput.addEventListener('input', () => {
+      fetchUsers(userSearchInput.value);
+    });
+
+    async function fetchOrders(search = '', sort = '', order = 'asc') {
+      try {
+        const response = await fetch(`/admin/orders?search=${search}&sort=${sort}&order=${order}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch orders');
+        }
+
+        const orders = await response.json();
+        renderOrders(orders);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        alert('Failed to load orders.');
+      }
+    }
+
+
+
+    function renderOrders(orders) {
+      orderTableBody.innerHTML = '';
+
+      if (!orders || orders.length === 0) {
+        orderTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No orders found.</td></tr>';
+        return;
+      }
+
+      orders.forEach(order => {
+        const products = Array.isArray(order.products) && order.products.length > 0
+                ? order.products.map(op => `${op.product.name} (x${op.quantity})`).join(', ')
+                : 'No products';
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+      <td>${order.user.email}</td>
+      <td>${new Date(order.order_date).toLocaleDateString()}</td>
+      <td>${products}</td>
+      <td>${order.total_price.toFixed(2)}</td>
+      <td>
+        <button class="btn btn-danger btn-sm delete-order" data-id="${order.id}">Delete</button>
+      </td>
+    `;
+        orderTableBody.appendChild(row);
+      });
+
+      attachOrderEvents();
+    }
+
+
+
+    function attachOrderEvents() {
+      document.querySelectorAll('.delete-order').forEach(button => {
+        button.addEventListener('click', async () => {
+          const orderId = button.dataset.id;
+          if (confirm('Are you sure you want to delete this order?')) {
+            try {
+              const response = await fetch(`/admin/orders?id=${orderId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`,
+                },
+              });
+
+              if (!response.ok) {
+                throw new Error('Failed to delete order');
+              }
+
+              fetchOrders();
+            } catch (err) {
+              console.error('Error deleting order:', err);
+              alert('Failed to delete order.');
+            }
+          }
+        });
+      });
+    }
+
+    orderSearchInput.addEventListener('input', () => {
+      fetchOrders(orderSearchInput.value, orderSortSelect.value);
+    });
+
+    orderSortSelect.addEventListener('change', () => {
+      fetchOrders(orderSearchInput.value, orderSortSelect.value);
+    });
+
+    orderSortSelect.addEventListener('change', () => {
+      fetchOrders(orderSearchInput.value, orderSortSelect.value, orderSortOrder.value);
+    });
+
+    orderSortOrder.addEventListener('change', () => {
+      fetchOrders(orderSearchInput.value, orderSortSelect.value, orderSortOrder.value);
+    });
+
+    fetchOrders();
+    fetchUsers();
+  });
+
+</script>
+
+</body>
+</html>

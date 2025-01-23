@@ -7,3 +7,74 @@ CREATE TABLE emails (
     status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+------------------------------
+
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL
+);
+
+INSERT INTO roles (name) VALUES ('admin'), ('user');
+
+-------------------------------
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role_id INT NOT NULL,
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
+);
+
+--------------------------------
+
+ALTER TABLE users
+ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE users
+ADD COLUMN confirmation_token UUID;
+
+-----------------------------------
+
+ALTER TABLE users
+ADD COLUMN first_name VARCHAR(255) DEFAULT '',
+ADD COLUMN last_name VARCHAR(255) DEFAULT '',
+ADD COLUMN birth_year INT DEFAULT NULL;
+
+------------------------------------
+
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    products JSON NOT NULL, -- Список продуктов в формате JSON
+    total_price DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-------------------------------------
+
+INSERT INTO roles (name) VALUES ('admin')
+ON CONFLICT (name) DO NOTHING;
+
+-------------------------------------
+
+CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX idx_orders_user_id ON orders (user_id);
+
+-------------------------------------
+
+INSERT INTO users (email, password, role_id, email_verified)
+VALUES ('admin@admin.com', 'admin', 1, true);
+
+ALTER TABLE users ALTER COLUMN confirmation_token DROP NOT NULL;
+
+CREATE TABLE IF NOT EXISTS order_products (
+    id SERIAL PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+);

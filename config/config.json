@@ -6,5 +6,7 @@
   "DatabaseHost": "localhost",
   "DatabasePort": 5432,
   "DatabaseUser": "postgres",
-  "DatabaseName": "emails"
+  "DatabaseName": "emails",
+  "AdminEmail": "admin@admin.com",
+  "AdminPassword": "admin"
 }

@@ -14,6 +14,8 @@ type Config struct {
 	DatabasePort   int    `json:"DatabasePort"`
 	DatabaseUser   string `json:"DatabaseUser"`
 	DatabaseName   string `json:"DatabaseName"`
+	AdminEmail     string `json:"AdminEmail"`
+	AdminPassword  string `json:"AdminPassword"`
 }
 
 func LoadConfig() (*Config, error) {

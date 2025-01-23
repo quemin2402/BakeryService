@@ -4,7 +4,10 @@ import (
 	"BakeryService/config"
 	"BakeryService/db"
 	"BakeryService/handlers"
+	"BakeryService/handlers/admin"
+	"BakeryService/handlers/auth"
 	"BakeryService/logger"
+	"BakeryService/middleware"
 	"fmt"
 	"github.com/gorilla/mux"
 	"golang.org/x/time/rate"
@@ -55,6 +58,22 @@ func main() {
 	r.HandleFunc("/api/products", handlers.GetFilteredProducts(database)).Methods("GET")
 
 	r.HandleFunc("/api/send-email", handlers.SendEmailHandler(config)).Methods("POST")
+
+	r.HandleFunc("/api/auth/login", auth.LoginHandler(database, config)).Methods("POST")
+	r.Handle("/api/auth/profile", middleware.AuthMiddleware(http.HandlerFunc(auth.ProfileHandler(database)))).Methods("GET")
+	r.Handle("/api/auth/profile/update", middleware.AuthMiddleware(http.HandlerFunc(auth.UpdateProfileHandler(database)))).Methods("PUT")
+	r.HandleFunc("/api/auth/register", auth.RegisterHandler(database, config)).Methods("POST")
+	r.HandleFunc("/api/auth/confirm-email", auth.ConfirmEmailHandler(database)).Methods("GET")
+
+	adminRoutes := r.PathPrefix("/admin").Subrouter()
+	adminRoutes.Use(middleware.AuthMiddleware, middleware.AdminMiddleware)
+
+	adminRoutes.HandleFunc("/users", admin.GetUsersHandler(database)).Methods("GET")
+	adminRoutes.HandleFunc("/orders", admin.GetOrdersHandler(database)).Methods("GET")
+	adminRoutes.HandleFunc("/orders", admin.DeleteOrderHandler(database)).Methods("DELETE")
+	adminRoutes.HandleFunc("/users/{id}", admin.UpdateUserHandler(database)).Methods("PUT")
+	adminRoutes.HandleFunc("/users/{id}", admin.DeleteUserHandler(database)).Methods("DELETE")
+	adminRoutes.HandleFunc("/users", admin.CreateUserHandler(database)).Methods("POST")
 
 	fs := http.FileServer(http.Dir("./static"))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
