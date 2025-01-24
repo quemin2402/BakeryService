@@ -4,6 +4,8 @@ import (
 	"BakeryService/handlers"
 	_ "BakeryService/handlers/admin"
 	"BakeryService/models"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +13,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+func InitTestDB() *gorm.DB {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect to test database")
+	}
+
+	db.AutoMigrate(&models.Product{})
+
+	return db
+}
 
 func TestGetFilteredProducts(t *testing.T) {
 	db := InitTestDB()
