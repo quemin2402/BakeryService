@@ -33,6 +33,11 @@
     </form>
 
     <div id="statusMessage" class="mt-3"></div>
+
+    <h3>Support Chat</h3>
+    <button id="startChat" class="btn btn-primary">Start Chat</button>
+    <a id="chatLink" style="display: none;" href="chat-user.html">Go to Chat</a>
+
 </div>
 </main>
 
@@ -75,6 +80,25 @@
             alert('Error loading profile. Please try again.');
             window.location.href = "login.html";
         }
+
+        if (!token) {
+            alert('You must be logged in.');
+            window.location.href = "login.html";
+        }
+
+        try {
+            const response = await fetch('/api/chat/status', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const chat = await response.json();
+                document.getElementById('startChat').style.display = 'none';
+                document.getElementById('chatLink').style.display = 'block';
+            }
+        } catch (err) {
+            console.error('Error checking chat status:', err);
+        }
     });
 
     document.getElementById('updateProfileForm').addEventListener('submit', async (e) => {
@@ -115,6 +139,19 @@
             document.getElementById('statusMessage').innerHTML = `
                 <p class="text-danger">Error updating profile: ${err.message}</p>
             `;
+        }
+    });
+
+    document.getElementById('startChat').addEventListener('click', async () => {
+        const token = localStorage.getItem('jwtToken');
+        const response = await fetch('/api/chat/start', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            document.getElementById('startChat').style.display = 'none';
+            document.getElementById('chatLink').style.display = 'block';
         }
     });
 </script>

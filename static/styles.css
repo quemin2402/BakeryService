@@ -49,3 +49,70 @@ button:hover,
   height: 100%;
 }
 
+/* Общие стили для чата */
+#chat-container {
+  max-width: 600px;
+  margin: 30px auto;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Окно чата */
+#chat-box {
+  height: 400px;
+  overflow-y: auto;
+  border: 2px solid #8b4513;
+  padding: 10px;
+  background: #fff8dc;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Сообщения в чате */
+.message {
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 5px;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.message.user {
+  background-color: #d2b48c;
+  align-self: flex-end;
+  color: white;
+}
+
+.message.admin {
+  background-color: #f4a460;
+  align-self: flex-start;
+  color: white;
+}
+
+/* Ввод сообщения */
+#message-input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #8b4513;
+  border-radius: 5px;
+  margin-top: 10px;
+}
+
+/* Кнопка отправки */
+#send-btn {
+  background-color: #8b4513;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  cursor: pointer;
+  border-radius: 5px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+#send-btn:hover {
+  background-color: #a0522d;
+}

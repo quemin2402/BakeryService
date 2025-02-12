@@ -4,6 +4,7 @@ import (
 	"BakeryService/config"
 	"BakeryService/models"
 	"encoding/json"
+	"errors"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -91,4 +92,21 @@ func LoginHandler(db *gorm.DB, config *config.Config) http.HandlerFunc {
 			"token":   tokenString,
 		})
 	}
+}
+
+func ValidateJWT(tokenString string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return JwtKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	return claims, nil
 }

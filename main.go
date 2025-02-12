@@ -75,6 +75,17 @@ func main() {
 	adminRoutes.HandleFunc("/users/{id}", admin.DeleteUserHandler(database)).Methods("DELETE")
 	adminRoutes.HandleFunc("/users", admin.CreateUserHandler(database)).Methods("POST")
 
+	r.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		handlers.HandleConnections(database, w, r)
+	}).Methods("GET")
+
+	r.HandleFunc("/api/chat/start", handlers.StartChat(database)).Methods("POST")
+	r.HandleFunc("/api/chat/close", handlers.CloseChat(database)).Methods("POST")
+	adminRoutes.HandleFunc("/chats", handlers.GetActiveChats(database)).Methods("GET")
+	r.Handle("/api/chat/status", middleware.AuthMiddleware(http.HandlerFunc(handlers.GetChatStatus(database)))).Methods("GET")
+
+	go handlers.HandleMessages()
+
 	fs := http.FileServer(http.Dir("./static"))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
 
@@ -123,7 +134,7 @@ func errorHandlingMiddleware(next http.Handler) http.Handler {
 
 func rateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/static/" || r.URL.Path[:8] == "/static/" {
+		if r.URL.Path == "/static/" || len(r.URL.Path) >= 8 && r.URL.Path[:8] == "/static/" {
 			next.ServeHTTP(w, r)
 			return
 		}

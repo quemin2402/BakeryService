@@ -9,7 +9,8 @@ import (
 )
 
 func ConnectDB() *gorm.DB {
-	connStr := "host=dpg-cu98v31u0jms73fchiag-a.oregon-postgres.render.com user=bakery password=FOiJPHf6SQRqgUih0ipJN183iI1VA2mm dbname=bakery_688h port=5432 sslmode=require"
+	connStr := "host=localhost user=postgres password=0000 dbname=Testing_BS port=5432 sslmode=disable"
+
 	db, err := gorm.Open(postgres.Open(connStr), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %v", err)
@@ -32,5 +33,9 @@ func ConnectDB() *gorm.DB {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
+	err = db.AutoMigrate(&models.Chat{}, &models.Message{})
+	if err != nil {
+		log.Fatalf("Failed to migrate chat tables: %v", err)
+	}
 	return db
 }
