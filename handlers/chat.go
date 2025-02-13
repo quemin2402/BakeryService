@@ -26,34 +26,30 @@ func HandleConnections(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	chatIDStr := r.URL.Query().Get("chat_id")
 
-	if chatIDStr == "" {
-		log.Println("Invalid chat ID: null")
+	if chatIDStr == "" || chatIDStr == "null" {
+		log.Println("Invalid chat ID received:", chatIDStr)
 		http.Error(w, "Invalid chat ID", http.StatusBadRequest)
 		return
 	}
 
 	chatID, err := strconv.Atoi(chatIDStr)
 	if err != nil || chatID <= 0 {
-		log.Println("Invalid chat ID:", chatIDStr)
+		log.Println("Invalid chat ID format:", chatIDStr)
 		http.Error(w, "Invalid chat ID", http.StatusBadRequest)
 		return
 	}
 
-	var userID int
-	if token == "" {
-		log.Println("Super Admin detected, assigning userID = -1")
-		userID = 0 // Фиктивный ID для админа без токена
-	} else {
-		claims, err := auth.ValidateJWT(token)
-		if err != nil {
-			log.Println("JWT validation failed:", err)
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		userID = int(claims.UserID)
+	var userID uint
+	claims, err := auth.ValidateJWT(token)
+	if err != nil {
+		log.Println("JWT validation failed:", err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
+	userID = claims.UserID
 
-	// Проверяем, существует ли чат
+	log.Printf("User %d connecting to chat %d", userID, chatID)
+
 	var chat models.Chat
 	if err := db.First(&chat, chatID).Error; err != nil {
 		log.Println("Chat not found:", chatID)
@@ -64,15 +60,12 @@ func HandleConnections(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("WebSocket upgrade failed:", err)
-		http.Error(w, "Could not open WebSocket connection", http.StatusBadRequest)
 		return
 	}
 	defer ws.Close()
 
-	log.Printf("User %d connected to WebSocket in chat %d", userID, chatID)
-
 	mutex.Lock()
-	clients[uint(userID)] = ws
+	clients[userID] = ws
 	mutex.Unlock()
 
 	for {
@@ -81,24 +74,19 @@ func HandleConnections(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println("Error reading JSON:", err)
 			mutex.Lock()
-			delete(clients, uint(userID))
+			delete(clients, userID)
 			mutex.Unlock()
 			break
 		}
 
-		// Проверяем, можно ли сохранять сообщения
+		msg.ChatID = uint(chatID)
+		msg.Timestamp = time.Now()
+
 		if userID > 0 {
-			msg.UserID = uint(userID)
-			msg.ChatID = uint(chatID)
-			msg.Timestamp = time.Now()
-
-			log.Printf("Processed message: %+v", msg)
-
+			msg.UserID = userID
 			if err := db.Create(&msg).Error; err != nil {
 				log.Println("Error saving message:", err)
 			}
-		} else {
-			log.Println("Admin is sending a message, skipping database insert")
 		}
 
 		broadcast <- msg
@@ -129,6 +117,7 @@ func StartChat(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
 		if len(token) < 7 {
+			log.Println("Invalid token received")
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
@@ -136,23 +125,24 @@ func StartChat(db *gorm.DB) http.HandlerFunc {
 
 		claims, err := auth.ValidateJWT(token)
 		if err != nil {
+			log.Println("JWT validation failed:", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		userID := claims.UserID
-		if userID == 0 {
-			http.Error(w, "Invalid user ID", http.StatusUnauthorized)
-			return
-		}
-
 		log.Printf("User %d is trying to start a chat", userID)
 
 		var existingChat models.Chat
 		if err := db.Where("user_id = ? AND is_active = true", userID).First(&existingChat).Error; err == nil {
 			log.Printf("Chat already exists for user %d: ChatID %d", userID, existingChat.ID)
+
+			// Проверяем, что сервер отправляет `id`
+			response := map[string]interface{}{"id": existingChat.ID}
+			log.Printf("Sending chat data: %+v", response)
+
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(existingChat)
+			json.NewEncoder(w).Encode(response)
 			return
 		}
 
@@ -165,8 +155,11 @@ func StartChat(db *gorm.DB) http.HandlerFunc {
 
 		log.Printf("New chat created: ChatID %d for User %d", chat.ID, userID)
 
+		response := map[string]interface{}{"id": chat.ID}
+		log.Printf("Sending new chat data: %+v", response)
+
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(chat)
+		json.NewEncoder(w).Encode(response)
 	}
 }
 

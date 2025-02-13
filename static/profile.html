@@ -144,16 +144,35 @@
 
     document.getElementById('startChat').addEventListener('click', async () => {
         const token = localStorage.getItem('jwtToken');
-        const response = await fetch('/api/chat/start', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
 
-        if (response.ok) {
-            document.getElementById('startChat').style.display = 'none';
-            document.getElementById('chatLink').style.display = 'block';
+        try {
+            const response = await fetch('/api/chat/start', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const chatData = await response.json();
+            console.log("Chat started:", chatData);  // Проверяем, что приходит с сервера
+
+            if (!chatData.id) {
+                throw new Error("chat_id is missing in response from backend");
+            }
+
+            // ✅ Обновляем ссылку с полученным `chat_id`
+            const chatLink = document.getElementById('chatLink');
+            chatLink.href = `/static/chat-user.html?chat_id=${chatData.id}`;
+            chatLink.style.display = 'block';
+
+            // ✅ Перенаправляем пользователя в чат с `chat_id`
+            window.location.href = `/static/chat-user.html?chat_id=${chatData.id}`;
+
+        } catch (error) {
+            console.error("Error starting chat:", error);
+            alert("Could not start chat. Please try again.");
         }
     });
+
+
 </script>
 </body>
 </html>

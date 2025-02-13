@@ -28,52 +28,22 @@
     window.location.href = "admin.html";
   }
 
-  console.log(`Connecting to WebSocket: ws://localhost:8080/ws?token=${token}&chat_id=${chatId}`);
   const socket = new WebSocket(`ws://localhost:8080/ws?token=${token}&chat_id=${chatId}`);
 
-  socket.onopen = () => {
-    console.log("Connected to WebSocket as Admin");
-  };
-
   socket.onmessage = function(event) {
-    console.log("Message received:", event.data);
     const chatBox = document.getElementById('chat-box');
     const message = JSON.parse(event.data);
-    chatBox.innerHTML += `<p><strong>User ${message.user_id}:</strong> ${message.content}</p>`;
+    chatBox.innerHTML += `<p><strong>${message.user_id === 0 ? "Admin" : "User " + message.user_id}:</strong> ${message.content}</p>`;
     chatBox.scrollTop = chatBox.scrollHeight;
   };
 
   document.getElementById('send-btn').addEventListener('click', () => {
     const input = document.getElementById('message-input');
     if (input.value.trim() !== '') {
-      if (!chatId) {
-        alert("Chat ID is missing!");
-        return;
-      }
-
-      socket.send(JSON.stringify({
-        chat_id: chatId,
-        content: input.value
-      }));
-
+      socket.send(JSON.stringify({ chat_id: chatId, content: input.value }));
       input.value = '';
     }
   });
-
-
-  socket.onerror = function(event) {
-    console.error("WebSocket error:", event);
-    alert("WebSocket connection failed. Please check your session.");
-  };
-
-  socket.onclose = function(event) {
-    console.warn("WebSocket closed:", event);
-    if (event.code === 1006) {
-      alert("Session expired. Please log in again.");
-      localStorage.removeItem("jwtToken");
-      window.location.href = "login.html";
-    }
-  };
 
 </script>
 </body>

@@ -23,47 +23,26 @@
   const chatId = urlParams.get('chat_id');
   const token = localStorage.getItem('jwtToken');
 
-  if (!chatId || !token) {
-    alert('Invalid chat session.');
-    window.location.href = "login.html";
+  console.log("Extracted chatId:", chatId);
+  console.log("Extracted token:", token);
+
+  if (!chatId || chatId === "null" || !token) {
+    alert('Invalid chat session. Redirecting to profile.');
+    window.location.href = "profile.html";
   }
 
-  console.log(`Connecting to WebSocket: ws://localhost:8080/ws?token=${token}&chat_id=${chatId}`);
   const socket = new WebSocket(`ws://localhost:8080/ws?token=${token}&chat_id=${chatId}`);
 
-  socket.onerror = function(event) {
-    console.error("WebSocket error:", event);
-    alert("WebSocket connection failed. Please check your session.");
-  };
-
-  socket.onclose = function(event) {
-    console.warn("WebSocket closed:", event);
-    if (event.code === 1006) {
-      alert("Session expired. Please log in again.");
-      localStorage.removeItem("jwtToken");
-      window.location.href = "login.html";
-    }
+  socket.onopen = () => {
+    console.log("WebSocket connected");
   };
 
   socket.onmessage = function(event) {
-    console.log("Message received:", event.data);
     const chatBox = document.getElementById('chat-box');
     const message = JSON.parse(event.data);
     chatBox.innerHTML += `<p><strong>User ${message.user_id}:</strong> ${message.content}</p>`;
     chatBox.scrollTop = chatBox.scrollHeight;
   };
-
-  document.getElementById('send-btn').addEventListener('click', () => {
-    const input = document.getElementById('message-input');
-    if (input.value.trim() !== '') {
-      socket.send(JSON.stringify({
-        chat_id: chatId,
-        content: input.value
-      }));
-
-      input.value = '';
-    }
-  });
 
 </script>
 
