@@ -94,7 +94,9 @@
             if (response.ok) {
                 const chat = await response.json();
                 document.getElementById('startChat').style.display = 'none';
-                document.getElementById('chatLink').style.display = 'block';
+                const chatLink = document.getElementById('chatLink');
+                chatLink.href = `/static/chat-user.html?chat_id=${chat.ID}`;
+                chatLink.style.display = 'block';
             }
         } catch (err) {
             console.error('Error checking chat status:', err);
@@ -160,11 +162,11 @@
 
             // ✅ Обновляем ссылку с полученным `chat_id`
             const chatLink = document.getElementById('chatLink');
-            chatLink.href = `/static/chat-user.html?chat_id=${chatData.id}`;
+            chatLink.href = `/static/chat-user.html?chat_id=${chatData.ID}`;
             chatLink.style.display = 'block';
 
             // ✅ Перенаправляем пользователя в чат с `chat_id`
-            window.location.href = `/static/chat-user.html?chat_id=${chatData.id}`;
+            window.location.href = `/static/chat-user.html?chat_id=${chatData.ID}`;
 
         } catch (error) {
             console.error("Error starting chat:", error);
