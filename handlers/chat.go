@@ -19,7 +19,7 @@ var upgrader = websocket.Upgrader{
 }
 
 var clients = make(map[uint]*websocket.Conn)
-var broadcast = make(chan models.Message)
+var broadcast = make(chan models.MessageResponse)
 var mutex sync.Mutex
 
 func HandleConnections(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
@@ -82,14 +82,29 @@ func HandleConnections(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		msg.ChatID = uint(chatID)
 		msg.Timestamp = time.Now()
 
-		if userID > 0 {
-			msg.UserID = userID
-			if err := db.Create(&msg).Error; err != nil {
-				log.Println("Error saving message:", err)
-			}
+		msg.UserID = userID
+		if err := db.Create(&msg).Error; err != nil {
+			log.Println("Error saving message:", err)
 		}
 
-		broadcast <- msg
+		var role uint
+
+		if claims.Role == "admin" {
+			role = 1
+		} else {
+			role = 2
+		}
+
+		responseMsg := models.MessageResponse{
+			ID:        msg.ID,
+			Content:   msg.Content,
+			UserID:    msg.UserID,
+			ChatID:    msg.ChatID,
+			Timestamp: msg.Timestamp,
+			Role:      role,
+		}
+
+		broadcast <- responseMsg
 	}
 }
 
@@ -100,14 +115,14 @@ func HandleMessages() {
 
 		mutex.Lock()
 		for userID, client := range clients {
-			if msg.UserID != userID {
-				err := client.WriteJSON(msg)
-				if err != nil {
-					log.Println("Error sending message to user", userID, ":", err)
-					client.Close()
-					delete(clients, userID)
-				}
+
+			err := client.WriteJSON(msg)
+			if err != nil {
+				log.Println("Error sending message to user", userID, ":", err)
+				client.Close()
+				delete(clients, userID)
 			}
+
 		}
 		mutex.Unlock()
 	}
@@ -133,20 +148,12 @@ func StartChat(db *gorm.DB) http.HandlerFunc {
 		userID := claims.UserID
 		log.Printf("User %d is trying to start a chat", userID)
 
-		var existingChat models.Chat
-		if err := db.Where("user_id = ? AND is_active = true", userID).First(&existingChat).Error; err == nil {
-			log.Printf("Chat already exists for user %d: ChatID %d", userID, existingChat.ID)
-
-			// Проверяем, что сервер отправляет `id`
-			response := map[string]interface{}{"id": existingChat.ID}
-			log.Printf("Sending chat data: %+v", response)
-
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(response)
-			return
+		// Simply create a new chat
+		chat := models.Chat{
+			UserID:   userID,
+			IsActive: true,
 		}
 
-		chat := models.Chat{UserID: userID, IsActive: true}
 		if err := db.Create(&chat).Error; err != nil {
 			log.Println("Failed to create chat:", err)
 			http.Error(w, "Failed to create chat", http.StatusInternalServerError)
@@ -159,37 +166,61 @@ func StartChat(db *gorm.DB) http.HandlerFunc {
 		log.Printf("Sending new chat data: %+v", response)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(chat)
 	}
 }
 
 func CloseChat(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		chatIDStr := r.URL.Query().Get("chat_id")
+		if chatIDStr == "" {
+			http.Error(w, "Missing chat ID", http.StatusBadRequest)
+			return
+		}
+
+		chatID, err := strconv.Atoi(chatIDStr)
+		if err != nil || chatID <= 0 {
+			http.Error(w, "Invalid chat ID", http.StatusBadRequest)
+			return
+		}
+
 		token := r.Header.Get("Authorization")
 		if len(token) < 7 {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
-		token = token[7:]
 
-		claims, err := auth.ValidateJWT(token)
+		claims, err := auth.ValidateJWT(token[7:])
 		if err != nil {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		userID := claims.UserID
+		if claims.Role != "admin" {
+			http.Error(w, "Forbidden: Only admin can close chats", http.StatusForbidden)
+			return
+		}
 
-		db.Model(&models.Chat{}).Where("user_id = ?", userID).Update("is_active", false)
+		var chat models.Chat
+		if err := db.First(&chat, chatID).Error; err != nil {
+			http.Error(w, "Chat not found", http.StatusNotFound)
+			return
+		}
+
+		if err := db.Model(&models.Chat{}).Where("id = ?", chatID).Update("is_active", false).Error; err != nil {
+			http.Error(w, "Failed to close chat", http.StatusInternalServerError)
+			return
+		}
 
 		mutex.Lock()
-		if client, ok := clients[userID]; ok {
+		if client, ok := clients[chat.UserID]; ok {
 			client.Close()
-			delete(clients, userID)
+			delete(clients, chat.UserID)
 		}
 		mutex.Unlock()
 
 		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Chat closed successfully"})
 	}
 }
 
@@ -259,5 +290,80 @@ func GetChatStatus(db *gorm.DB) http.HandlerFunc {
 		}
 
 		http.Error(w, "No active chat", http.StatusNotFound)
+	}
+}
+
+func GetChatMessages(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		chatID := r.URL.Query().Get("chat_id")
+		if chatID == "" {
+			http.Error(w, "Missing chat ID", http.StatusBadRequest)
+			return
+		}
+
+		token := r.Header.Get("Authorization")
+		if len(token) < 7 {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		claims, err := auth.ValidateJWT(token[7:])
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		cid, err := strconv.Atoi(chatID)
+		if err != nil || cid <= 0 {
+			http.Error(w, "Invalid chat ID", http.StatusBadRequest)
+			return
+		}
+		chatIDUint := uint(cid)
+
+		var chat models.Chat
+		if err := db.First(&chat, chatIDUint).Error; err != nil {
+			http.Error(w, "Chat not found", http.StatusNotFound)
+			return
+		}
+
+		if claims.Role != "admin" && chat.UserID != claims.UserID {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		var messages []struct {
+			models.Message
+			RoleID uint `json:"role_id"`
+		}
+
+		if err := db.Table("messages").
+			Select("messages.*, users.role_id").
+			Joins("LEFT JOIN users ON messages.user_id = users.id").
+			Where("messages.chat_id = ?", chatIDUint).
+			Order("messages.timestamp asc").
+			Scan(&messages).Error; err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+
+		var responseMessages []models.MessageResponse
+		for _, msg := range messages {
+			roleID := msg.RoleID
+			if msg.UserID == 0 {
+				roleID = 1
+			}
+
+			responseMsg := models.MessageResponse{
+				ID:        msg.ID,
+				Content:   msg.Content,
+				UserID:    msg.UserID,
+				ChatID:    msg.ChatID,
+				Timestamp: msg.Timestamp,
+				Role:      roleID,
+			}
+			responseMessages = append(responseMessages, responseMsg)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(responseMessages)
 	}
 }

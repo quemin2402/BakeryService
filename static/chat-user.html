@@ -40,9 +40,62 @@
   socket.onmessage = function(event) {
     const chatBox = document.getElementById('chat-box');
     const message = JSON.parse(event.data);
-    chatBox.innerHTML += `<p><strong>User ${message.user_id}:</strong> ${message.content}</p>`;
+    if (message.ChatID != chatId) return;
+    chatBox.innerHTML += `<div class="mb-2">
+        <small class="text-muted">${new Date(message.Timestamp).toLocaleTimeString()}</small>
+        <p class="mb-1">
+            <strong class="text-${message.Role === 1 ? "success" : "primary"}">
+                ${message.Role === 1 ? "Admin" : "User " + message.UserID}:
+            </strong>
+            ${message.Content}
+        </p>
+    </div>
+`;
     chatBox.scrollTop = chatBox.scrollHeight;
   };
+
+  document.getElementById('send-btn').addEventListener('click', () => {
+    const input = document.getElementById('message-input');
+    if (input.value.trim() !== '') {
+      socket.send(JSON.stringify({ chat_id: chatId, content: input.value }));
+      input.value = '';
+    }
+  });
+
+  async function loadInitialMessages() {
+    try {
+      const response = await fetch(`/api/chat/messages?chat_id=${chatId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load messages');
+      }
+
+      const messages = await response.json();
+      const chatBox = document.getElementById('chat-box');
+
+      messages.forEach(message => {
+        chatBox.innerHTML += `<div class="mb-2">
+        <small class="text-muted">${new Date(message.Timestamp).toLocaleTimeString()}</small>
+        <p class="mb-1">
+            <strong class="text-${message.Role === 1 ? "success" : "primary"}">
+                ${message.Role === 1 ? "Admin" : "User " + message.UserID}:
+            </strong>
+            ${message.Content}
+        </p>
+    </div>
+`;      });
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+  }
+
+  loadInitialMessages();
 
 </script>
 

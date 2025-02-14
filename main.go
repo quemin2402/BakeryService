@@ -84,6 +84,7 @@ func main() {
 	adminRoutes.HandleFunc("/chats", handlers.GetActiveChats(database)).Methods("GET")
 	r.Handle("/api/chat/status", middleware.AuthMiddleware(http.HandlerFunc(handlers.GetChatStatus(database)))).Methods("GET")
 
+	r.HandleFunc("/api/chat/messages", handlers.GetChatMessages(database)).Methods("GET")
 	go handlers.HandleMessages()
 
 	fs := http.FileServer(http.Dir("./static"))

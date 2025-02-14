@@ -12,7 +12,10 @@
 <body>
 <main class="container mt-5 mb-5 bg-white p-5 rounded-5 shadow-sm">
   <div class="container mt-5">
-    <h2>Admin Chat</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Admin Chat</h2>
+      <button id="close-chat-btn" class="btn btn-danger">Close Chat</button>
+    </div>
     <div id="chat-box" class="mb-3"></div>
     <input type="text" id="message-input" class="form-control" placeholder="Type a message...">
     <button id="send-btn" class="btn btn-success mt-2">Send</button>
@@ -33,8 +36,17 @@
   socket.onmessage = function(event) {
     const chatBox = document.getElementById('chat-box');
     const message = JSON.parse(event.data);
-    chatBox.innerHTML += `<p><strong>${message.user_id === 0 ? "Admin" : "User " + message.user_id}:</strong> ${message.content}</p>`;
-    chatBox.scrollTop = chatBox.scrollHeight;
+    if (message.ChatID != chatId) return;
+    chatBox.innerHTML += `<div class="mb-2">
+        <small class="text-muted">${new Date(message.Timestamp).toLocaleTimeString()}</small>
+        <p class="mb-1">
+            <strong class="text-${message.Role === 1 ? "success" : "primary"}">
+                ${message.Role === 1 ? "Admin" : "User " + message.UserID}:
+            </strong>
+            ${message.Content}
+        </p>
+    </div>
+`;    chatBox.scrollTop = chatBox.scrollHeight;
   };
 
   document.getElementById('send-btn').addEventListener('click', () => {
@@ -45,6 +57,67 @@
     }
   });
 
+  async function loadInitialMessages() {
+    try {
+      const response = await fetch(`/api/chat/messages?chat_id=${chatId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load messages');
+      }
+
+      const messages = await response.json();
+      const chatBox = document.getElementById('chat-box');
+
+      messages.forEach(message => {
+        chatBox.innerHTML += `<div class="mb-2">
+        <small class="text-muted">${new Date(message.Timestamp).toLocaleTimeString()}</small>
+        <p class="mb-1">
+            <strong class="text-${message.Role === 1 ? "success" : "primary"}">
+                ${message.Role === 1 ? "Admin" : "User " + message.UserID}:
+            </strong>
+            ${message.Content}
+        </p>
+    </div>
+`;      });
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+  }
+
+  loadInitialMessages();
+
+  document.getElementById('close-chat-btn').addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to close this chat?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/chat/close?chat_id=${chatId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ chat_id: chatId })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to close chat');
+      }
+
+      alert('Chat closed successfully');
+      window.location.href = 'admin.html';
+    } catch (error) {
+      console.error('Error closing chat:', error);
+      alert('Failed to close chat');
+    }
+  });
 </script>
 </body>
 </html>

@@ -40,29 +40,24 @@ func LoginHandler(db *gorm.DB, config *config.Config) http.HandlerFunc {
 		var userID uint
 		var role string
 
-		if req.Email == config.AdminEmail && req.Password == config.AdminPassword {
-			role = "admin"
-			userID = 0
-		} else {
-			var user models.User
-			if err := db.Preload("Role").Where("email = ?", req.Email).First(&user).Error; err != nil {
-				http.Error(w, "Invalid email or password", http.StatusUnauthorized)
-				return
-			}
-
-			if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-				http.Error(w, "Invalid email or password", http.StatusUnauthorized)
-				return
-			}
-
-			if !user.EmailVerified {
-				http.Error(w, "Please verify your email before logging in", http.StatusUnauthorized)
-				return
-			}
-
-			role = user.Role.Name
-			userID = user.ID
+		var user models.User
+		if err := db.Preload("Role").Where("email = ?", req.Email).First(&user).Error; err != nil {
+			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+			return
 		}
+
+		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+			return
+		}
+
+		if !user.EmailVerified {
+			http.Error(w, "Please verify your email before logging in", http.StatusUnauthorized)
+			return
+		}
+
+		role = user.Role.Name
+		userID = user.ID
 
 		expirationTime := time.Now().Add(24 * time.Hour)
 		claims := &Claims{

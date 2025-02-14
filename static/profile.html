@@ -154,18 +154,8 @@
             });
 
             const chatData = await response.json();
-            console.log("Chat started:", chatData);  // Проверяем, что приходит с сервера
+            console.log("Chat started:", chatData);
 
-            if (!chatData.id) {
-                throw new Error("chat_id is missing in response from backend");
-            }
-
-            // ✅ Обновляем ссылку с полученным `chat_id`
-            const chatLink = document.getElementById('chatLink');
-            chatLink.href = `/static/chat-user.html?chat_id=${chatData.ID}`;
-            chatLink.style.display = 'block';
-
-            // ✅ Перенаправляем пользователя в чат с `chat_id`
             window.location.href = `/static/chat-user.html?chat_id=${chatData.ID}`;
 
         } catch (error) {
@@ -173,7 +163,6 @@
             alert("Could not start chat. Please try again.");
         }
     });
-
 
 </script>
 </body>
